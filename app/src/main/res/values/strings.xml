@@ -1,12 +1,12 @@
 <resources>
     <string name="app_name">WiinventTV</string>
-    <string name="browse_title"><![CDATA[Videos by Wiinvent]]></string>
+    <string name="browse_title"><![CDATA[WiinventTV Demo]]></string>
     <string name="related_movies">Related Videos</string>
     <string name="grid_view">Grid View</string>
     <string name="error_fragment">Error Fragment</string>
     <string name="personal_settings">Personal Settings</string>
-    <string name="watch_trailer_1">Watch trailer</string>
-    <string name="watch_trailer_2">FREE</string>
+    <string name="watch_trailer_1">Xem demo</string>
+    <string name="watch_trailer_2">Tương tác</string>
     <string name="rent_1">Rent By Day</string>
     <string name="rent_2">From $1.99</string>
     <string name="buy_1">Buy and Own</string>

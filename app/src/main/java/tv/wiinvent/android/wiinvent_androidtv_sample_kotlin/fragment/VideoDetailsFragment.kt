@@ -52,6 +52,7 @@ import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.MainActivit
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.PlaybackActivity
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.MovieList
+import java.lang.Integer.parseInt
 
 import java.util.Collections
 
@@ -120,7 +121,7 @@ class VideoDetailsFragment : DetailsSupportFragment() {
             DETAIL_THUMB_HEIGHT
         )
         Glide.with(context)
-            .load(mSelectedMovie?.cardImageUrl)
+            .load(mSelectedMovie?.cardImageUrl?.let { parseInt(it) })
             .centerCrop()
             .error(R.drawable.default_background)
             .into<SimpleTarget<GlideDrawable>>(object : SimpleTarget<GlideDrawable>(width, height) {
@@ -141,20 +142,6 @@ class VideoDetailsFragment : DetailsSupportFragment() {
                 ACTION_WATCH_TRAILER,
                 resources.getString(R.string.watch_trailer_1),
                 resources.getString(R.string.watch_trailer_2)
-            )
-        )
-        actionAdapter.add(
-            Action(
-                ACTION_RENT,
-                resources.getString(R.string.rent_1),
-                resources.getString(R.string.rent_2)
-            )
-        )
-        actionAdapter.add(
-            Action(
-                ACTION_BUY,
-                resources.getString(R.string.buy_1),
-                resources.getString(R.string.buy_2)
             )
         )
         row.actionsAdapter = actionAdapter

@@ -24,6 +24,7 @@ import android.view.ViewGroup
 import com.bumptech.glide.Glide
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
+import java.lang.Integer.parseInt
 import kotlin.properties.Delegates
 
 /**
@@ -75,7 +76,8 @@ class CardPresenter : Presenter() {
                 CARD_HEIGHT
             )
             Glide.with(viewHolder.view.context)
-                .load(movie.cardImageUrl)
+//                .load(movie.cardImageUrl)
+                .load(parseInt(movie.cardImageUrl!!))
                 .centerCrop()
                 .error(mDefaultCardImage)
                 .into(cardView.mainImageView)

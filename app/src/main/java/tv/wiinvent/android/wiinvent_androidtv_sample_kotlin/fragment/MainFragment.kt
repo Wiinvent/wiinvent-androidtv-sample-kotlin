@@ -133,15 +133,6 @@ class MainFragment : BrowseSupportFragment() {
             rowsAdapter.add(ListRow(header, listRowAdapter))
         }
 
-        val gridHeader = HeaderItem(NUM_ROWS.toLong(), "PREFERENCES")
-
-        val mGridPresenter = GridItemPresenter()
-        val gridRowAdapter = ArrayObjectAdapter(mGridPresenter)
-        gridRowAdapter.add(resources.getString(R.string.grid_view))
-        gridRowAdapter.add(getString(R.string.error_fragment))
-        gridRowAdapter.add(resources.getString(R.string.personal_settings))
-        rowsAdapter.add(ListRow(gridHeader, gridRowAdapter))
-
         adapter = rowsAdapter
     }
 
@@ -260,7 +251,7 @@ class MainFragment : BrowseSupportFragment() {
         private val BACKGROUND_UPDATE_DELAY = 300
         private val GRID_ITEM_WIDTH = 200
         private val GRID_ITEM_HEIGHT = 200
-        private val NUM_ROWS = 1
+        private val NUM_ROWS = 2
         private val NUM_COLS = 2
     }
 }

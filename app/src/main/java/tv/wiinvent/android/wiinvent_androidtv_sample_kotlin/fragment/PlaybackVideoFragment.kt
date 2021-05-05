@@ -14,14 +14,16 @@
 
 package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment
 
+import android.app.Activity
 import android.content.ComponentName
 import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
-import android.view.*
-import android.webkit.WebView
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
@@ -35,14 +37,19 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
+import com.google.gson.Gson
+import okhttp3.*
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.DetailsActivity
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.ConfigRes
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
 import tv.wiinvent.wiinventsdk.OverlayManager
 import tv.wiinvent.wiinventsdk.interfaces.DefaultOverlayEventListener
 import tv.wiinvent.wiinventsdk.interfaces.PlayerChangeListener
 import tv.wiinvent.wiinventsdk.models.ConfigData
 import tv.wiinvent.wiinventsdk.models.OverlayData
+import java.io.IOException
+import java.net.URL
 
 
 /** Handles video playback with media controls. */
@@ -51,7 +58,10 @@ class PlaybackVideoFragment : Fragment() {
     companion object {
         val TAG = PlaybackVideoFragment.javaClass.canonicalName
         val SAMPLE_CHANNEL_ID = "54"
-        val SAMPLE_STREAM_ID = "76"
+        val ACCOUNT_ID = "81"
+        val TOKEN = "3001"
+        val SAMPLE_STREAM_ID = "115"
+        val ENV = OverlayData.Environment.DEV
     }
 
     private var exoplayerView: PlayerView? = null
@@ -62,7 +72,7 @@ class PlaybackVideoFragment : Fragment() {
     private var overlayManager: OverlayManager? = null
 
     private var streamUrl: String? = ""
-
+    private val client: OkHttpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,13 +94,55 @@ class PlaybackVideoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         exoplayerView = activity?.findViewById(R.id.simple_exo_player_view)
 
-        init(savedInstanceState)
+//        init(savedInstanceState, null)
+//        getRequest("https://wiinvent.tv/config/wiinvent-tv-config.json")
+        getConfig("https://wiinvent.tv/config/wiinvent-tv-config.json", savedInstanceState)
     }
 
-    private fun init(savedInstanceState: Bundle?) {
+    private fun getConfig(url: String, savedInstanceState: Bundle?) {
+        val request = Request.Builder()
+                .url(url)
+                .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                activity?.runOnUiThread(Runnable { //Handle UI here
+                    init(savedInstanceState, null)
+                })
+            }
+            override fun onResponse(call: Call, response: Response) {
+                activity?.runOnUiThread(Runnable { //Handle UI here
+                    var res = response.body()?.string()
+                    val gson = Gson()
+                    var result = gson.fromJson(res?.trimIndent(), ConfigRes::class.java)
+                    init(savedInstanceState, result)
+                })
+            }
+        })
+    }
+
+    private fun getRequest(sUrl: String): String? {
+        var result: String? = null
+
+        try {
+            // Create URL
+            val url = URL(sUrl)
+            // Build request
+            val request = Request.Builder().url(url).build()
+            // Execute request
+            val response = client.newCall(request).execute()
+            result = response?.body()?.string()
+        }
+        catch(err:Error) {
+            print("*** Error when executing get request: "+err.localizedMessage)
+        }
+        return result
+    }
+
+
+    private fun init(savedInstanceState: Bundle?, config: ConfigRes?) {
         if (savedInstanceState == null) {
             initializePlayer()
-            initializeOverlays()
+            initializeOverlays(config)
         }
     }
 
@@ -115,16 +167,33 @@ class PlaybackVideoFragment : Fragment() {
         concatenatingMediaSource = ConcatenatingMediaSource()
     }
 
-    private fun initializeOverlays() {
-        val overlayData = OverlayData.Builder()
-            .channelId(SAMPLE_CHANNEL_ID)
-            .thirdPartyToken("token Viettel")
-            .streamId(SAMPLE_STREAM_ID)
-            .debug(true)
-            .previewMode(true)
-            .env(OverlayData.Environment.DEV)
-            .deviceType(OverlayData.DeviceType.TV)
-            .build()
+    private fun initializeOverlays(config: ConfigRes?) {
+        var overlayData: OverlayData? = null
+        if (null == config) {
+            overlayData = OverlayData.Builder()
+                    .channelId(SAMPLE_CHANNEL_ID)
+                    .accountId(ACCOUNT_ID)
+                    .thirdPartyToken(TOKEN)
+                    .streamId(SAMPLE_STREAM_ID)
+                    .debug(true)
+                    .previewMode(true)
+                    .env(ENV)
+                    .deviceType(OverlayData.DeviceType.TV)
+                    .mappingType(OverlayData.MappingType.WI)
+                    .build()
+        } else {
+            overlayData = OverlayData.Builder()
+                    .channelId("" + config.channelId)
+                    .accountId("" + config.accountId)
+                    .thirdPartyToken(config.token.toString())
+                    .streamId("" + config.streamId)
+                    .debug(true)
+                    .previewMode(true)
+                    .env(ENV)
+                    .deviceType(OverlayData.DeviceType.TV)
+                    .mappingType(OverlayData.MappingType.WI)
+                    .build()
+        }
 
         overlayManager = OverlayManager(
             activity!!,
@@ -132,12 +201,14 @@ class PlaybackVideoFragment : Fragment() {
             overlayData
         )
         overlayManager?.addOverlayListener(object: DefaultOverlayEventListener {
-            override fun onConfigReady(config: ConfigData) {
+            override fun onConfigReady(configData: ConfigData) {
                 activity?.runOnUiThread {
-                    for (source in config.getStreamSources()) {
-                        val mediaSource = buildMediaSource(source?.url ?: "")
-                        concatenatingMediaSource?.addMediaSource(mediaSource)
+                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    if (null != config) {
+                        url = config.contentUrl.toString()
                     }
+                    val mediaSource = buildMediaSource(url)
+                    concatenatingMediaSource?.addMediaSource(mediaSource)
 
                     exoplayer?.playWhenReady = true
                     exoplayer?.prepare(concatenatingMediaSource)
@@ -145,9 +216,31 @@ class PlaybackVideoFragment : Fragment() {
             }
 
             override fun onLoadError() {
+                activity?.runOnUiThread {
+                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    if (null != config) {
+                        url = config.contentUrl.toString()
+                    }
+                    val mediaSource = buildMediaSource(url)
+                    concatenatingMediaSource?.addMediaSource(mediaSource)
+
+                    exoplayer?.playWhenReady = true
+                    exoplayer?.prepare(concatenatingMediaSource)
+                }
             }
 
             override fun onTimeout() {
+                activity?.runOnUiThread {
+                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    if (null != config) {
+                        url = config.contentUrl.toString()
+                    }
+                    val mediaSource = buildMediaSource(url)
+                    concatenatingMediaSource?.addMediaSource(mediaSource)
+
+                    exoplayer?.playWhenReady = true
+                    exoplayer?.prepare(concatenatingMediaSource)
+                }
             }
 
             override fun onWebViewBrowserClose() {
@@ -172,14 +265,11 @@ class PlaybackVideoFragment : Fragment() {
         // Add player event listeners to determine overlay visibility.
         exoplayer?.addListener(object : Player.EventListener{
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-
                 Log.d(TAG, "====onPlayerStateChanged playWhenReady: $playWhenReady - $playbackState")
-
                 overlayManager?.setVisible(playWhenReady && playbackState == Player.STATE_READY)
             }
 
             override fun onPlayerError(error: ExoPlaybackException?) {
-
                 if(error?.type == ExoPlaybackException.TYPE_SOURCE) {
                     playNextMediaSource()
                 }
