@@ -50,6 +50,7 @@ import tv.wiinvent.wiinventsdk.models.ConfigData
 import tv.wiinvent.wiinventsdk.models.OverlayData
 import java.io.IOException
 import java.net.URL
+import kotlin.math.log
 
 
 /** Handles video playback with media controls. */
@@ -57,10 +58,10 @@ class PlaybackVideoFragment : Fragment() {
 
     companion object {
         val TAG = PlaybackVideoFragment.javaClass.canonicalName
-        val SAMPLE_CHANNEL_ID = "54"
-        val ACCOUNT_ID = "81"
-        val TOKEN = "3001"
-        val SAMPLE_STREAM_ID = "115"
+        val SAMPLE_CHANNEL_ID = "41"
+        val ACCOUNT_ID = "15"
+        val TOKEN = "5008"
+        val SAMPLE_STREAM_ID = "44"
         val ENV = OverlayData.Environment.DEV
     }
 
@@ -94,9 +95,8 @@ class PlaybackVideoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         exoplayerView = activity?.findViewById(R.id.simple_exo_player_view)
 
-//        init(savedInstanceState, null)
-//        getRequest("https://wiinvent.tv/config/wiinvent-tv-config.json")
-        getConfig("https://wiinvent.tv/config/wiinvent-tv-config.json", savedInstanceState)
+        init(savedInstanceState, null)
+//        getConfig("https://wiinvent.tv/config/wiinvent-tv-config.json", savedInstanceState)
     }
 
     private fun getConfig(url: String, savedInstanceState: Bundle?) {
@@ -111,33 +111,15 @@ class PlaybackVideoFragment : Fragment() {
             }
             override fun onResponse(call: Call, response: Response) {
                 activity?.runOnUiThread(Runnable { //Handle UI here
-                    var res = response.body()?.string()
+                    var res = response.body?.string()
                     val gson = Gson()
                     var result = gson.fromJson(res?.trimIndent(), ConfigRes::class.java)
+                    Log.e("***** result", result.toString())
                     init(savedInstanceState, result)
                 })
             }
         })
     }
-
-    private fun getRequest(sUrl: String): String? {
-        var result: String? = null
-
-        try {
-            // Create URL
-            val url = URL(sUrl)
-            // Build request
-            val request = Request.Builder().url(url).build()
-            // Execute request
-            val response = client.newCall(request).execute()
-            result = response?.body()?.string()
-        }
-        catch(err:Error) {
-            print("*** Error when executing get request: "+err.localizedMessage)
-        }
-        return result
-    }
-
 
     private fun init(savedInstanceState: Bundle?, config: ConfigRes?) {
         if (savedInstanceState == null) {
@@ -148,7 +130,7 @@ class PlaybackVideoFragment : Fragment() {
 
     private fun initializePlayer() {
         val trackSelector = DefaultTrackSelector()
-        val componentName = ComponentName(context!!, "Exo")
+        val componentName = ComponentName(requireContext(), "Exo")
 
         exoplayer = ExoPlayerFactory.newSimpleInstance(context, trackSelector)
         exoplayerView?.player = exoplayer
@@ -196,14 +178,14 @@ class PlaybackVideoFragment : Fragment() {
         }
 
         overlayManager = OverlayManager(
-            activity!!,
+            requireActivity(),
             R.id.wisdk_overlay_view,
             overlayData
         )
         overlayManager?.addOverlayListener(object: DefaultOverlayEventListener {
             override fun onConfigReady(configData: ConfigData) {
                 activity?.runOnUiThread {
-                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
                     if (null != config) {
                         url = config.contentUrl.toString()
                     }
@@ -217,7 +199,7 @@ class PlaybackVideoFragment : Fragment() {
 
             override fun onLoadError() {
                 activity?.runOnUiThread {
-                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
                     if (null != config) {
                         url = config.contentUrl.toString()
                     }
@@ -231,7 +213,7 @@ class PlaybackVideoFragment : Fragment() {
 
             override fun onTimeout() {
                 activity?.runOnUiThread {
-                    var url: String = "https://wiinvent.tv/videos/nhanh_nhu_chop.mp4"
+                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
                     if (null != config) {
                         url = config.contentUrl.toString()
                     }

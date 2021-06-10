@@ -42,8 +42,8 @@ object MovieList {
             "V-Entertaiment"
         )
         val videoUrl = arrayOf(
-            "https://dev.wiinvent.tv/videos/votingdemo.mp4",
-            "https://dev.wiinvent.tv/videos/donationdemo.mp4"
+            "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4",
+            "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
         )
         val bgImageUrl = arrayOf(
             "https://static.independent.co.uk/s3fs-public/thumbnails/image/2014/07/08/22/v2david-luiz.jpg?w968",

@@ -30,7 +30,7 @@ class ErrorFragment : ErrorSupportFragment() {
     }
 
     internal fun setErrorContent() {
-        imageDrawable = ContextCompat.getDrawable(context!!,
+        imageDrawable = ContextCompat.getDrawable(requireContext(),
             R.drawable.lb_ic_sad_cloud
         )
         message = resources.getString(R.string.error_fragment_message)

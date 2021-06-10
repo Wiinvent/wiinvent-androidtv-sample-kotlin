@@ -74,7 +74,7 @@ class VideoDetailsFragment : DetailsSupportFragment() {
 
         mDetailsBackground = DetailsSupportFragmentBackgroundController(this!!)
 
-        mSelectedMovie = activity!!.intent.getSerializableExtra(DetailsActivity.MOVIE) as Movie
+        mSelectedMovie = requireActivity().intent.getSerializableExtra(DetailsActivity.MOVIE) as Movie
         if (mSelectedMovie != null) {
             mPresenterSelector = ClassPresenterSelector()
             mAdapter = ArrayObjectAdapter(mPresenterSelector)
@@ -111,13 +111,13 @@ class VideoDetailsFragment : DetailsSupportFragment() {
     private fun setupDetailsOverviewRow() {
         Log.d(TAG, "doInBackground: " + mSelectedMovie?.toString())
         val row = DetailsOverviewRow(mSelectedMovie)
-        row.imageDrawable = ContextCompat.getDrawable(context!!,
+        row.imageDrawable = ContextCompat.getDrawable(requireContext(),
             R.drawable.default_background
         )
-        val width = convertDpToPixel(context!!,
+        val width = convertDpToPixel(requireContext(),
             DETAIL_THUMB_WIDTH
         )
-        val height = convertDpToPixel(context!!,
+        val height = convertDpToPixel(requireContext(),
             DETAIL_THUMB_HEIGHT
         )
         Glide.with(context)
@@ -153,7 +153,7 @@ class VideoDetailsFragment : DetailsSupportFragment() {
         // Set detail background.
         val detailsPresenter = FullWidthDetailsOverviewRowPresenter(DetailsDescriptionPresenter())
         detailsPresenter.backgroundColor =
-            ContextCompat.getColor(context!!,
+            ContextCompat.getColor(requireContext(),
                 R.color.selected_background
             )
 
