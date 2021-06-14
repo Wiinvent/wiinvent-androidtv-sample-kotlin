@@ -14,7 +14,6 @@
 
 package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment
 
-import android.app.Activity
 import android.content.ComponentName
 import android.net.Uri
 import android.os.Bundle
@@ -41,16 +40,16 @@ import com.google.gson.Gson
 import okhttp3.*
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.DetailsActivity
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.AppConfigRes
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.ConfigRes
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.MovieList
 import tv.wiinvent.wiinventsdk.OverlayManager
 import tv.wiinvent.wiinventsdk.interfaces.DefaultOverlayEventListener
 import tv.wiinvent.wiinventsdk.interfaces.PlayerChangeListener
 import tv.wiinvent.wiinventsdk.models.ConfigData
 import tv.wiinvent.wiinventsdk.models.OverlayData
 import java.io.IOException
-import java.net.URL
-import kotlin.math.log
 
 
 /** Handles video playback with media controls. */
@@ -63,6 +62,7 @@ class PlaybackVideoFragment : Fragment() {
         val TOKEN = "5008"
         val SAMPLE_STREAM_ID = "44"
         val ENV = OverlayData.Environment.DEV
+        val CONTENT_TYPE = OverlayData.ContentType.VOD
     }
 
     private var exoplayerView: PlayerView? = null
@@ -74,19 +74,23 @@ class PlaybackVideoFragment : Fragment() {
 
     private var streamUrl: String? = ""
     private val client: OkHttpClient = OkHttpClient()
+    private var envVideo: String? = ""
+    private var contentTypeVideo: String? = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val (_, title, description, _, _, videoUrl) =
-            activity?.intent?.getSerializableExtra(DetailsActivity.MOVIE) as Movie
+        val (_, title, description, _, _, videoUrl, _, contentType) =
+                activity?.intent?.getSerializableExtra(DetailsActivity.MOVIE) as Movie
         streamUrl = videoUrl
+        Log.e("********* 123321123321 ", contentType)
+        envVideo = contentType
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.playback_video_fragment, container, false)
     }
@@ -95,8 +99,8 @@ class PlaybackVideoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         exoplayerView = activity?.findViewById(R.id.simple_exo_player_view)
 
-        init(savedInstanceState, null)
-//        getConfig("https://wiinvent.tv/config/wiinvent-tv-config.json", savedInstanceState)
+//        init(savedInstanceState, null)
+        getConfig("https://wiinvent.tv/config/wiinvent-app-config.json", savedInstanceState)
     }
 
     private fun getConfig(url: String, savedInstanceState: Bundle?) {
@@ -106,14 +110,16 @@ class PlaybackVideoFragment : Fragment() {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 activity?.runOnUiThread(Runnable { //Handle UI here
+                    Log.e("***** onFailureonFailure", e.toString())
                     init(savedInstanceState, null)
                 })
             }
+
             override fun onResponse(call: Call, response: Response) {
                 activity?.runOnUiThread(Runnable { //Handle UI here
                     var res = response.body?.string()
                     val gson = Gson()
-                    var result = gson.fromJson(res?.trimIndent(), ConfigRes::class.java)
+                    var result = gson.fromJson(res?.trimIndent(), AppConfigRes::class.java)
                     Log.e("***** result", result.toString())
                     init(savedInstanceState, result)
                 })
@@ -121,7 +127,7 @@ class PlaybackVideoFragment : Fragment() {
         })
     }
 
-    private fun init(savedInstanceState: Bundle?, config: ConfigRes?) {
+    private fun init(savedInstanceState: Bundle?, config: AppConfigRes?) {
         if (savedInstanceState == null) {
             initializePlayer()
             initializeOverlays(config)
@@ -138,9 +144,9 @@ class PlaybackVideoFragment : Fragment() {
 
         playbackStateBuilder = PlaybackStateCompat.Builder()
         playbackStateBuilder?.setActions(
-            PlaybackStateCompat.ACTION_PLAY or
-                    PlaybackStateCompat.ACTION_PAUSE or
-                    PlaybackStateCompat.ACTION_FAST_FORWARD)
+                PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_FAST_FORWARD)
 
         mediaSession = MediaSessionCompat(context, "ExoPlayer", componentName, null)
         mediaSession?.setPlaybackState(playbackStateBuilder?.build())
@@ -149,8 +155,9 @@ class PlaybackVideoFragment : Fragment() {
         concatenatingMediaSource = ConcatenatingMediaSource()
     }
 
-    private fun initializeOverlays(config: ConfigRes?) {
+    private fun initializeOverlays(config: AppConfigRes?) {
         var overlayData: OverlayData? = null
+        var url: String? = MovieList.URL_INIT
         if (null == config) {
             overlayData = OverlayData.Builder()
                     .channelId(SAMPLE_CHANNEL_ID)
@@ -160,36 +167,61 @@ class PlaybackVideoFragment : Fragment() {
                     .debug(true)
                     .previewMode(true)
                     .env(ENV)
+                    .contentType(CONTENT_TYPE)
                     .deviceType(OverlayData.DeviceType.TV)
                     .mappingType(OverlayData.MappingType.WI)
                     .build()
         } else {
+            var video: ConfigRes? = null
+            var env = OverlayData.Environment.DEV
+            var ct = OverlayData.ContentType.VOD
+
+            if ("livestream" == envVideo?.toLowerCase()) {
+                video = config.livestream
+                url = config.livestream?.contentUrl
+                ct = OverlayData.ContentType.LIVESTREAM
+                env = if ("DEV" == config.livestream?.env) {
+                    OverlayData.Environment.DEV
+                } else {
+                    OverlayData.Environment.PRODUCTION
+                }
+            } else {
+                video = config.vod
+                url = config.vod?.contentUrl
+                ct = OverlayData.ContentType.VOD
+                env = if ("DEV" == config.vod?.env) {
+                    OverlayData.Environment.DEV
+                } else {
+                    OverlayData.Environment.PRODUCTION
+                }
+            }
+            if ("production".equals(video?.env?.toLowerCase())) {
+                env = OverlayData.Environment.PRODUCTION
+            }
+
             overlayData = OverlayData.Builder()
-                    .channelId("" + config.channelId)
-                    .accountId("" + config.accountId)
-                    .thirdPartyToken(config.token.toString())
-                    .streamId("" + config.streamId)
+                    .channelId("" + video?.channelId)
+                    .accountId("" + video?.accountId)
+                    .thirdPartyToken(video?.token.toString())
+                    .streamId("" + video?.streamId)
                     .debug(true)
                     .previewMode(true)
-                    .env(ENV)
+                    .env(env)
+                    .contentType(ct)
                     .deviceType(OverlayData.DeviceType.TV)
                     .mappingType(OverlayData.MappingType.WI)
                     .build()
         }
 
         overlayManager = OverlayManager(
-            requireActivity(),
-            R.id.wisdk_overlay_view,
-            overlayData
+                requireActivity(),
+                R.id.wisdk_overlay_view,
+                overlayData
         )
-        overlayManager?.addOverlayListener(object: DefaultOverlayEventListener {
+        overlayManager?.addOverlayListener(object : DefaultOverlayEventListener {
             override fun onConfigReady(configData: ConfigData) {
                 activity?.runOnUiThread {
-                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
-                    if (null != config) {
-                        url = config.contentUrl.toString()
-                    }
-                    val mediaSource = buildMediaSource(url)
+                    val mediaSource = buildMediaSource(url.toString())
                     concatenatingMediaSource?.addMediaSource(mediaSource)
 
                     exoplayer?.playWhenReady = true
@@ -199,11 +231,7 @@ class PlaybackVideoFragment : Fragment() {
 
             override fun onLoadError() {
                 activity?.runOnUiThread {
-                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
-                    if (null != config) {
-                        url = config.contentUrl.toString()
-                    }
-                    val mediaSource = buildMediaSource(url)
+                    val mediaSource = buildMediaSource(url.toString())
                     concatenatingMediaSource?.addMediaSource(mediaSource)
 
                     exoplayer?.playWhenReady = true
@@ -213,11 +241,7 @@ class PlaybackVideoFragment : Fragment() {
 
             override fun onTimeout() {
                 activity?.runOnUiThread {
-                    var url: String = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4"
-                    if (null != config) {
-                        url = config.contentUrl.toString()
-                    }
-                    val mediaSource = buildMediaSource(url)
+                    val mediaSource = buildMediaSource(url.toString())
                     concatenatingMediaSource?.addMediaSource(mediaSource)
 
                     exoplayer?.playWhenReady = true
@@ -239,20 +263,20 @@ class PlaybackVideoFragment : Fragment() {
         })
 
         // Set the player position for VOD playback.
-        overlayManager?.addPlayerListener(object: PlayerChangeListener {
+        overlayManager?.addPlayerListener(object : PlayerChangeListener {
             override val currentPosition: Long?
                 get() = exoplayer?.currentPosition
         })
 
         // Add player event listeners to determine overlay visibility.
-        exoplayer?.addListener(object : Player.EventListener{
+        exoplayer?.addListener(object : Player.EventListener {
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                 Log.d(TAG, "====onPlayerStateChanged playWhenReady: $playWhenReady - $playbackState")
                 overlayManager?.setVisible(playWhenReady && playbackState == Player.STATE_READY)
             }
 
             override fun onPlayerError(error: ExoPlaybackException?) {
-                if(error?.type == ExoPlaybackException.TYPE_SOURCE) {
+                if (error?.type == ExoPlaybackException.TYPE_SOURCE) {
                     playNextMediaSource()
                 }
             }
@@ -260,26 +284,26 @@ class PlaybackVideoFragment : Fragment() {
         })
     }
 
-    private fun buildMediaSource(url: String) : MediaSource {
+    private fun buildMediaSource(url: String): MediaSource {
         val userAgent = Util.getUserAgent(context, "Exo")
         val dataSourceFactory = DefaultDataSourceFactory(context, userAgent)
         val uri = Uri.parse(url)
 
         return when (val type = Util.inferContentType(uri)) {
             C.TYPE_DASH -> DashMediaSource
-                .Factory(dataSourceFactory)
-                .createMediaSource(uri)
+                    .Factory(dataSourceFactory)
+                    .createMediaSource(uri)
             C.TYPE_HLS -> HlsMediaSource
-                .Factory(dataSourceFactory)
-                .setAllowChunklessPreparation(true)
-                .createMediaSource(uri)
+                    .Factory(dataSourceFactory)
+                    .setAllowChunklessPreparation(true)
+                    .createMediaSource(uri)
             C.TYPE_SS -> SsMediaSource
-                .Factory(dataSourceFactory)
-                .createMediaSource(uri)
+                    .Factory(dataSourceFactory)
+                    .createMediaSource(uri)
             C.TYPE_OTHER -> ExtractorMediaSource
-                .Factory(dataSourceFactory)
-                .setExtractorsFactory(DefaultExtractorsFactory())
-                .createMediaSource(uri)
+                    .Factory(dataSourceFactory)
+                    .setExtractorsFactory(DefaultExtractorsFactory())
+                    .createMediaSource(uri)
             else -> throw IllegalStateException("Unsupported type :: $type")
         }
 

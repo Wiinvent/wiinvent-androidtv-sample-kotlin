@@ -104,11 +104,11 @@ class MainFragment : BrowseSupportFragment() {
         isHeadersTransitionOnBackEnabled = true
 
         // set fastLane (or headers) background color
-        brandColor = ContextCompat.getColor(context!!,
+        brandColor = ContextCompat.getColor(requireContext(),
             R.color.fastlane_background
         )
         // set search icon color
-        searchAffordanceColor = ContextCompat.getColor(context!!,
+        searchAffordanceColor = ContextCompat.getColor(requireContext(),
             R.color.search_opaque
         )
     }
@@ -138,7 +138,7 @@ class MainFragment : BrowseSupportFragment() {
 
     private fun setupEventListeners() {
         setOnSearchClickedListener {
-            Toast.makeText(context, "Implement your own in-app search", Toast.LENGTH_LONG)
+            Toast.makeText(context, "Tìm kiếm... Wiinvent.tv Demo", Toast.LENGTH_LONG)
                 .show()
         }
 
