@@ -76,8 +76,8 @@ class CardPresenter : Presenter() {
                 CARD_HEIGHT
             )
             Glide.with(viewHolder.view.context)
-//                .load(movie.cardImageUrl)
-                .load(parseInt(movie.cardImageUrl!!))
+                .load(movie.cardImageUrl)
+//                .load(parseInt(movie.cardImageUrl!!))
                 .centerCrop()
                 .error(mDefaultCardImage)
                 .into(cardView.mainImageView)

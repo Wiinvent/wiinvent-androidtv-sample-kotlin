@@ -17,17 +17,17 @@ package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
 
 object MovieList {
-    const val URL_INIT = "https://static1.dev.wiinvent.tv/video/video_url_1623213495784.mp4";
+    const val URL_INIT = "https://dev.wiinvent.tv/videos/donationdemo.mp4";
 
     val MOVIE_CATEGORY = arrayOf(
-            "K+",
-            "VTV1"
+            "Livestream",
+            "VOD"
     )
 
     val list: List<Movie> by lazy {
         setupMovies()
     }
-    private var count: Long = 0
+    private var count: Int = 0
 
     private fun setupMovies(): List<Movie> {
         val title = arrayOf(
@@ -93,7 +93,7 @@ object MovieList {
         movie.studio = studio
         movie.cardImageUrl = cardImageUrl
         movie.backgroundImageUrl = backgroundImageUrl
-        movie.videoUrl = videoUrl
+        movie.contentUrl = videoUrl
         movie.contentType = contentType
         return movie
     }

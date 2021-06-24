@@ -48,12 +48,18 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
+import com.google.gson.Gson
+import okhttp3.*
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.Presenter.CardPresenter
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.MovieList
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.BrowseErrorActivity
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.DetailsActivity
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.AppConfigRes
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.ConfigRes
+import java.io.IOException
+import java.lang.Integer.parseInt
 
 /**
  * Loads a grid of cards with movies to browse.
@@ -67,6 +73,8 @@ class MainFragment : BrowseSupportFragment() {
     private var mBackgroundTimer: Timer? = null
     private var mBackgroundUri: String? = null
 
+    private val client: OkHttpClient = OkHttpClient()
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         Log.i(TAG, "onCreate")
         super.onActivityCreated(savedInstanceState)
@@ -75,9 +83,7 @@ class MainFragment : BrowseSupportFragment() {
 
         setupUIElements()
 
-        loadRows()
-
-        setupEventListeners()
+        getConfig("https://wiinvent.tv/config/wiinvent-app-config.json")
     }
 
     override fun onDestroy() {
@@ -86,8 +92,33 @@ class MainFragment : BrowseSupportFragment() {
         mBackgroundTimer?.cancel()
     }
 
-    private fun prepareBackgroundManager() {
+    private fun getConfig(url: String) {
+        val request = Request.Builder()
+                .url(url)
+                .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                activity?.runOnUiThread(Runnable { //Handle UI here
+                    Log.e("***** onFailureonFailure", e.toString())
+                    loadRows(null)
+                    setupEventListeners()
+                })
+            }
 
+            override fun onResponse(call: Call, response: Response) {
+                activity?.runOnUiThread(Runnable { //Handle UI here
+                    var res = response.body?.string()
+                    val gson = Gson()
+                    var result = gson.fromJson(res?.trimIndent(), AppConfigRes::class.java)
+                    Log.e("***** result", result.toString())
+                    loadRows(result)
+                    setupEventListeners()
+                })
+            }
+        })
+    }
+
+    private fun prepareBackgroundManager() {
         mBackgroundManager = BackgroundManager.getInstance(activity)
         mBackgroundManager.attach(activity?.window)
         mDefaultBackground = context?.let { ContextCompat.getDrawable(it,
@@ -113,21 +144,57 @@ class MainFragment : BrowseSupportFragment() {
         )
     }
 
-    private fun loadRows() {
-        val list =
+    private fun convertConfigToMovie(a: ConfigRes?, id: Int?): Movie {
+        var m: Movie = Movie()
+        m.id = id
+        m.accountId = a!!.accountId
+        m.channelId = a!!.channelId
+        m.streamId = a!!.streamId
+        m.token = a!!.token?.random()
+        m.env = a!!.env
+        m.contentUrl = a!!.contentUrl
+        m.contentType = a!!.contentType
+        m.title = a!!.title
+        m.description = a!!.description
+        m.backgroundImageUrl = a!!.backgroundImageUrl
+        m.cardImageUrl = a!!.cardImageUrl
+        m.studio = a!!.studio
+        return m
+    }
+
+    private fun loadRows(config: AppConfigRes?) {
+        var listVod =
             MovieList.list
+        var listLive =
+            MovieList.list
+        if (null != config) {
+            var lVod:MutableList<Movie>? = ArrayList()
+            for (j in 0 until config?.vod?.size!!) {
+                var m: Movie = convertConfigToMovie(config?.vod?.get(j), j)
+                lVod?.add(m)
+            }
+            listVod = lVod!!
+            var lLivestream:MutableList<Movie>? = ArrayList()
+            for (j in 0 until config?.livestream?.size!!) {
+                var m: Movie = convertConfigToMovie(config?.livestream?.get(j), j)
+                lLivestream?.add(m)
+            }
+            listLive = lLivestream!!
+        }
 
         val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-        val cardPresenter =
-            CardPresenter()
+        val cardPresenter = CardPresenter()
 
         for (i in 0 until NUM_ROWS) {
-            if (i != 0) {
-                Collections.shuffle(list)
-            }
             val listRowAdapter = ArrayObjectAdapter(cardPresenter)
-            for (j in 0 until NUM_COLS) {
-                listRowAdapter.add(list[j % 2])
+            if (i == 0) {
+                for (j in 0 until listLive.size) {
+                    listRowAdapter.add(listLive[j])
+                }
+            } else {
+                for (j in 0 until listVod.size) {
+                    listRowAdapter.add(listVod[j])
+                }
             }
             val header = HeaderItem(i.toLong(), MovieList.MOVIE_CATEGORY[i])
             rowsAdapter.add(ListRow(header, listRowAdapter))
@@ -153,7 +220,6 @@ class MainFragment : BrowseSupportFragment() {
             rowViewHolder: RowPresenter.ViewHolder,
             row: Row
         ) {
-
             if (item is Movie) {
                 Log.d(TAG, "Item: " + item.toString())
                 val intent = Intent(context, DetailsActivity::class.java)
@@ -183,7 +249,9 @@ class MainFragment : BrowseSupportFragment() {
             rowViewHolder: RowPresenter.ViewHolder, row: Row
         ) {
             if (item is Movie) {
-                mBackgroundUri = item.backgroundImageUrl
+                mBackgroundUri = "https://coolbackgrounds.io/images/backgrounds/index/compute-ea4c57a4.png"
+//                mBackgroundUri = item.backgroundImageUrl
+//                updateBackground(mBackgroundUri)
                 startBackgroundTimer()
             }
         }
@@ -193,7 +261,8 @@ class MainFragment : BrowseSupportFragment() {
         val width = mMetrics.widthPixels
         val height = mMetrics.heightPixels
         Glide.with(context)
-            .load(uri)
+//            .load(uri)
+            .load(R.drawable.bg)
             .centerCrop()
             .error(mDefaultBackground)
             .into<SimpleTarget<GlideDrawable>>(

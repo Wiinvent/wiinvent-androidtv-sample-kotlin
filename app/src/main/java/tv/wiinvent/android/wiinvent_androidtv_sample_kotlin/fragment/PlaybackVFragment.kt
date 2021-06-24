@@ -1,17 +1,3 @@
-/*
- * Copyright (C) 2017 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment
 
 import android.content.ComponentName
@@ -36,12 +22,8 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
-import com.google.gson.Gson
-import okhttp3.*
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.R
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity.DetailsActivity
-import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.AppConfigRes
-import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.ConfigRes
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.Movie
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.model.MovieList
 import tv.wiinvent.wiinventsdk.OverlayManager
@@ -49,14 +31,13 @@ import tv.wiinvent.wiinventsdk.interfaces.DefaultOverlayEventListener
 import tv.wiinvent.wiinventsdk.interfaces.PlayerChangeListener
 import tv.wiinvent.wiinventsdk.models.ConfigData
 import tv.wiinvent.wiinventsdk.models.OverlayData
-import java.io.IOException
 
 
 /** Handles video playback with media controls. */
-class PlaybackVideoFragment : Fragment() {
+class PlaybackVFragment : Fragment() {
 
     companion object {
-        val TAG = PlaybackVideoFragment.javaClass.canonicalName
+        val TAG = PlaybackVFragment.javaClass.canonicalName
         val SAMPLE_CHANNEL_ID = "41"
         val ACCOUNT_ID = "15"
         val TOKEN = "5008"
@@ -72,17 +53,12 @@ class PlaybackVideoFragment : Fragment() {
     private var playbackStateBuilder: PlaybackStateCompat.Builder? = null
     private var overlayManager: OverlayManager? = null
 
-    private var streamUrl: String? = ""
-    private val client: OkHttpClient = OkHttpClient()
-    private var envVideo: String? = ""
+    private var video: Movie? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val v =
-                activity?.intent?.getSerializableExtra(DetailsActivity.MOVIE) as Movie
-        streamUrl = v.contentUrl
-        envVideo = v.contentType
+        video = activity?.intent?.getSerializableExtra(DetailsActivity.MOVIE) as Movie
+        Log.e("*** tokennnnnn", video!!.token)
     }
 
     override fun onCreateView(
@@ -97,38 +73,13 @@ class PlaybackVideoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         exoplayerView = activity?.findViewById(R.id.simple_exo_player_view)
 
-//        init(savedInstanceState, null)
-        getConfig("https://wiinvent.tv/config/wiinvent-app-config.json", savedInstanceState)
+        init(savedInstanceState)
     }
 
-    private fun getConfig(url: String, savedInstanceState: Bundle?) {
-        val request = Request.Builder()
-                .url(url)
-                .build()
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                activity?.runOnUiThread(Runnable { //Handle UI here
-                    Log.e("***** onFailureonFailure", e.toString())
-                    init(savedInstanceState, null)
-                })
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                activity?.runOnUiThread(Runnable { //Handle UI here
-                    var res = response.body?.string()
-                    val gson = Gson()
-                    var result = gson.fromJson(res?.trimIndent(), AppConfigRes::class.java)
-                    Log.e("***** result", result.toString())
-                    init(savedInstanceState, result)
-                })
-            }
-        })
-    }
-
-    private fun init(savedInstanceState: Bundle?, config: AppConfigRes?) {
+    private fun init(savedInstanceState: Bundle?) {
         if (savedInstanceState == null) {
             initializePlayer()
-            initializeOverlays(config)
+            initializeOverlays()
         }
     }
 
@@ -153,10 +104,24 @@ class PlaybackVideoFragment : Fragment() {
         concatenatingMediaSource = ConcatenatingMediaSource()
     }
 
-    private fun initializeOverlays(config: AppConfigRes?) {
-        var overlayData: OverlayData? = null
+    private fun initializeOverlays() {
         var url: String? = MovieList.URL_INIT
-//        if (null == config) {
+        var overlayData: OverlayData? = null
+        if (null != video) {
+            overlayData = OverlayData.Builder()
+                    .channelId("" + video?.channelId)
+                    .accountId("" + video?.accountId)
+                    .thirdPartyToken("" + video?.token)
+                    .streamId("" + video?.streamId)
+                    .debug(true)
+                    .previewMode(true)
+                    .env(ENV)
+                    .contentType(CONTENT_TYPE)
+                    .deviceType(OverlayData.DeviceType.TV)
+                    .mappingType(OverlayData.MappingType.WI)
+                    .build()
+            url = video!!.contentUrl
+        } else {
             overlayData = OverlayData.Builder()
                     .channelId(SAMPLE_CHANNEL_ID)
                     .accountId(ACCOUNT_ID)
@@ -169,52 +134,12 @@ class PlaybackVideoFragment : Fragment() {
                     .deviceType(OverlayData.DeviceType.TV)
                     .mappingType(OverlayData.MappingType.WI)
                     .build()
-//        } else {
-//            var video: ConfigRes? = null
-//            var env = OverlayData.Environment.DEV
-//            var ct = OverlayData.ContentType.VOD
-//
-//            if ("livestream" == envVideo?.toLowerCase()) {
-//                video = config.livestream
-//                url = config.livestream?.contentUrl
-//                ct = OverlayData.ContentType.LIVESTREAM
-//                env = if ("DEV" == config.livestream?.env) {
-//                    OverlayData.Environment.DEV
-//                } else {
-//                    OverlayData.Environment.PRODUCTION
-//                }
-//            } else {
-//                video = config.vod
-//                url = config.vod?.contentUrl
-//                ct = OverlayData.ContentType.VOD
-//                env = if ("DEV" == config.vod?.env) {
-//                    OverlayData.Environment.DEV
-//                } else {
-//                    OverlayData.Environment.PRODUCTION
-//                }
-//            }
-//            if ("production".equals(video?.env?.toLowerCase())) {
-//                env = OverlayData.Environment.PRODUCTION
-//            }
-//
-//            overlayData = OverlayData.Builder()
-//                    .channelId("" + video?.channelId)
-//                    .accountId("" + video?.accountId)
-//                    .thirdPartyToken(video?.token.toString())
-//                    .streamId("" + video?.streamId)
-//                    .debug(true)
-//                    .previewMode(true)
-//                    .env(env)
-//                    .contentType(ct)
-//                    .deviceType(OverlayData.DeviceType.TV)
-//                    .mappingType(OverlayData.MappingType.WI)
-//                    .build()
-//        }
+        }
 
         overlayManager = OverlayManager(
                 requireActivity(),
                 R.id.wisdk_overlay_view,
-                overlayData
+                overlayData!!
         )
         overlayManager?.addOverlayListener(object : DefaultOverlayEventListener {
             override fun onConfigReady(configData: ConfigData) {

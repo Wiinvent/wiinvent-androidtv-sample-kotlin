@@ -16,6 +16,7 @@ package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity
 
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
+import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment.PlaybackVFragment
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment.PlaybackVideoFragment
 
 /** Loads [PlaybackVideoFragment]. */
@@ -26,7 +27,8 @@ class PlaybackActivity : FragmentActivity() {
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(android.R.id.content,
-                    PlaybackVideoFragment()
+//                    PlaybackVideoFragment()
+                    PlaybackVFragment()
                 )
                 .commit()
         }
