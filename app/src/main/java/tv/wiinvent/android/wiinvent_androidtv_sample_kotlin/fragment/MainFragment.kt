@@ -170,12 +170,14 @@ class MainFragment : BrowseSupportFragment() {
         if (null != config) {
             var lVod:MutableList<Movie>? = ArrayList()
             for (j in 0 until config?.vod?.size!!) {
+                config?.vod?.get(j)?.contentType = "VOD"
                 var m: Movie = convertConfigToMovie(config?.vod?.get(j), j)
                 lVod?.add(m)
             }
             listVod = lVod!!
             var lLivestream:MutableList<Movie>? = ArrayList()
             for (j in 0 until config?.livestream?.size!!) {
+                config?.livestream?.get(j)?.contentType = "LIVESTREAM"
                 var m: Movie = convertConfigToMovie(config?.livestream?.get(j), j)
                 lLivestream?.add(m)
             }

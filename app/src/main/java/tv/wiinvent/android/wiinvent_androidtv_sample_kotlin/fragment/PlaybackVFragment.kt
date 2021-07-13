@@ -62,9 +62,9 @@ class PlaybackVFragment : Fragment() {
     }
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.playback_video_fragment, container, false)
     }
@@ -93,9 +93,10 @@ class PlaybackVFragment : Fragment() {
 
         playbackStateBuilder = PlaybackStateCompat.Builder()
         playbackStateBuilder?.setActions(
-                PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_FAST_FORWARD)
+            PlaybackStateCompat.ACTION_PLAY or
+                    PlaybackStateCompat.ACTION_PAUSE or
+                    PlaybackStateCompat.ACTION_FAST_FORWARD
+        )
 
         mediaSession = MediaSessionCompat(context, "ExoPlayer", componentName, null)
         mediaSession?.setPlaybackState(playbackStateBuilder?.build())
@@ -106,40 +107,50 @@ class PlaybackVFragment : Fragment() {
 
     private fun initializeOverlays() {
         var url: String? = MovieList.URL_INIT
-        var overlayData: OverlayData? = null
+        val overlayData: OverlayData?
         if (null != video) {
+            val env = if ("DEV" == video?.env) {
+                OverlayData.Environment.DEV
+            } else {
+                OverlayData.Environment.PRODUCTION
+            }
+            val contentType = if ("VOD" == video?.contentType) {
+                OverlayData.ContentType.VOD
+            } else {
+                OverlayData.ContentType.LIVESTREAM
+            }
             overlayData = OverlayData.Builder()
-                    .channelId("" + video?.channelId)
-                    .accountId("" + video?.accountId)
-                    .thirdPartyToken("" + video?.token)
-                    .streamId("" + video?.streamId)
-                    .debug(true)
-                    .previewMode(true)
-                    .env(ENV)
-                    .contentType(CONTENT_TYPE)
-                    .deviceType(OverlayData.DeviceType.TV)
-                    .mappingType(OverlayData.MappingType.WI)
-                    .build()
+                .channelId("" + video?.channelId)
+                .accountId("" + video?.accountId)
+                .thirdPartyToken("" + video?.token)
+                .streamId("" + video?.streamId)
+                .debug(true)
+                .previewMode(true)
+                .env(env)
+                .contentType(contentType)
+                .deviceType(OverlayData.DeviceType.TV)
+                .mappingType(OverlayData.MappingType.WI)
+                .build()
             url = video!!.contentUrl
         } else {
             overlayData = OverlayData.Builder()
-                    .channelId(SAMPLE_CHANNEL_ID)
-                    .accountId(ACCOUNT_ID)
-                    .thirdPartyToken(TOKEN)
-                    .streamId(SAMPLE_STREAM_ID)
-                    .debug(true)
-                    .previewMode(true)
-                    .env(ENV)
-                    .contentType(CONTENT_TYPE)
-                    .deviceType(OverlayData.DeviceType.TV)
-                    .mappingType(OverlayData.MappingType.WI)
-                    .build()
+                .channelId(SAMPLE_CHANNEL_ID)
+                .accountId(ACCOUNT_ID)
+                .thirdPartyToken(TOKEN)
+                .streamId(SAMPLE_STREAM_ID)
+                .debug(true)
+                .previewMode(true)
+                .env(ENV)
+                .contentType(CONTENT_TYPE)
+                .deviceType(OverlayData.DeviceType.TV)
+                .mappingType(OverlayData.MappingType.WI)
+                .build()
         }
 
         overlayManager = OverlayManager(
-                requireActivity(),
-                R.id.wisdk_overlay_view,
-                overlayData!!
+            requireActivity(),
+            R.id.wisdk_overlay_view,
+            overlayData!!
         )
         overlayManager?.addOverlayListener(object : DefaultOverlayEventListener {
             override fun onConfigReady(configData: ConfigData) {
@@ -194,8 +205,20 @@ class PlaybackVFragment : Fragment() {
         // Add player event listeners to determine overlay visibility.
         exoplayer?.addListener(object : Player.EventListener {
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                Log.d(TAG, "====onPlayerStateChanged playWhenReady: $playWhenReady - $playbackState")
+                Log.d(
+                    TAG,
+                    "**** onPlayerStateChanged playWhenReady: $playWhenReady - $playbackState"
+                )
                 overlayManager?.setVisible(playWhenReady && playbackState == Player.STATE_READY)
+
+                if (playbackState == PlaybackStateCompat.STATE_FAST_FORWARDING) {
+                    //do something
+                    Log.e("**** ABC", "PlaybackStateCompat.STATE_FAST_FORWARDING")
+                }
+                if (playbackState == PlaybackStateCompat.STATE_REWINDING) {
+                    //do something else
+                    Log.e("**** ABC", "PlaybackStateCompat.STATE_REWINDING")
+                }
             }
 
             override fun onPlayerError(error: ExoPlaybackException?) {
@@ -203,8 +226,26 @@ class PlaybackVFragment : Fragment() {
                     playNextMediaSource()
                 }
             }
-
         })
+//        exoplayer?.addListener(object : ExoPlayer.EventListener {
+//            override fun onPlayerStateChanged(
+//                playWhenReady: Boolean,
+//                playbackState: Int
+//            ) {
+//                if (playbackState == PlaybackStateCompat.STATE_FAST_FORWARDING) {
+//                    //do something
+//                    Log.e("**** ABC", "PlaybackStateCompat.STATE_FAST_FORWARDING")
+//                }
+//                if (playbackState == PlaybackStateCompat.STATE_REWINDING) {
+//                    //do something else
+//                    Log.e("**** ABC", "PlaybackStateCompat.STATE_REWINDING")
+//                }
+//            }
+//
+//            override fun onPlayerError(error: ExoPlaybackException?) {
+//                exoplayer?.stop()
+//            }
+//        })
     }
 
     private fun buildMediaSource(url: String): MediaSource {
@@ -214,19 +255,19 @@ class PlaybackVFragment : Fragment() {
 
         return when (val type = Util.inferContentType(uri)) {
             C.TYPE_DASH -> DashMediaSource
-                    .Factory(dataSourceFactory)
-                    .createMediaSource(uri)
+                .Factory(dataSourceFactory)
+                .createMediaSource(uri)
             C.TYPE_HLS -> HlsMediaSource
-                    .Factory(dataSourceFactory)
-                    .setAllowChunklessPreparation(true)
-                    .createMediaSource(uri)
+                .Factory(dataSourceFactory)
+                .setAllowChunklessPreparation(true)
+                .createMediaSource(uri)
             C.TYPE_SS -> SsMediaSource
-                    .Factory(dataSourceFactory)
-                    .createMediaSource(uri)
+                .Factory(dataSourceFactory)
+                .createMediaSource(uri)
             C.TYPE_OTHER -> ExtractorMediaSource
-                    .Factory(dataSourceFactory)
-                    .setExtractorsFactory(DefaultExtractorsFactory())
-                    .createMediaSource(uri)
+                .Factory(dataSourceFactory)
+                .setExtractorsFactory(DefaultExtractorsFactory())
+                .createMediaSource(uri)
             else -> throw IllegalStateException("Unsupported type :: $type")
         }
 
@@ -267,5 +308,10 @@ class PlaybackVFragment : Fragment() {
     override fun onPause() {
         super.onPause()
         exoplayer?.playWhenReady = false
+    }
+
+    public fun onEnterBtn() {
+        Log.e("**** current play", "" + exoplayer?.playWhenReady!!)
+        exoplayer?.playWhenReady = !exoplayer?.playWhenReady!!
     }
 }

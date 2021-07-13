@@ -14,10 +14,16 @@
 
 package tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.activity
 
+import android.R
 import android.os.Bundle
+import android.util.Log
+import android.view.KeyEvent
+import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment.PlaybackVFragment
 import tv.wiinvent.android.wiinvent_androidtv_sample_kotlin.fragment.PlaybackVideoFragment
+
 
 /** Loads [PlaybackVideoFragment]. */
 class PlaybackActivity : FragmentActivity() {
@@ -26,11 +32,26 @@ class PlaybackActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(android.R.id.content,
-//                    PlaybackVideoFragment()
+                .replace(
+                    android.R.id.content,
                     PlaybackVFragment()
                 )
                 .commit()
         }
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER -> {
+                val fm: FragmentManager = supportFragmentManager
+                val fragment: PlaybackVFragment =
+                    fm.findFragmentById(android.R.id.content) as PlaybackVFragment
+                fragment.onEnterBtn()
+            }
+            else -> { // Note the block
+                Log.e("*** pressed ", event.toString())
+            }
+        }
+        return super.onKeyUp(keyCode, event)
     }
 }
